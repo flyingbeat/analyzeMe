@@ -1,26 +1,27 @@
-import 'reflect-metadata';
 import { app, dialog, powerMonitor, systemPreferences } from 'electron';
+import log from 'electron-log/main';
 import { release } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import log from 'electron-log/main';
-import { getMainLogger } from '../config/Logger';
-import { DatabaseService } from './services/DatabaseService';
-import { SettingsService } from './services/SettingsService';
-import { TrackerType } from '../enums/TrackerType.enum';
-import { WindowActivityTrackerService } from './services/trackers/WindowActivityTrackerService';
-import { UserInputTrackerService } from './services/trackers/UserInputTrackerService';
-import { TrackerService } from './services/trackers/TrackerService';
-import AppUpdaterService from './services/AppUpdaterService';
-import { WindowService } from './services/WindowService';
-import { IpcHandler } from '../ipc/IpcHandler';
-import { ExperienceSamplingService } from './services/ExperienceSamplingService';
+import 'reflect-metadata';
 import studyConfig from '../../shared/study.config';
-import { is } from './services/utils/helpers';
-import { Settings } from './entities/Settings';
-import { UsageDataService } from './services/UsageDataService';
+import { getMainLogger } from '../config/Logger';
+import { TrackerType } from '../enums/TrackerType.enum';
 import { UsageDataEventType } from '../enums/UsageDataEventType.enum';
-import { WorkScheduleService } from './services/WorkScheduleService'
+import { IpcHandler } from '../ipc/IpcHandler';
+import { Settings } from './entities/Settings';
+import AppUpdaterService from './services/AppUpdaterService';
+import { DatabaseService } from './services/DatabaseService';
+import { DataStreamService } from './services/DataStreamService';
+import { ExperienceSamplingService } from './services/ExperienceSamplingService';
+import { SettingsService } from './services/SettingsService';
+import { TrackerService } from './services/trackers/TrackerService';
+import { UserInputTrackerService } from './services/trackers/UserInputTrackerService';
+import { WindowActivityTrackerService } from './services/trackers/WindowActivityTrackerService';
+import { UsageDataService } from './services/UsageDataService';
+import { is } from './services/utils/helpers';
+import { WindowService } from './services/WindowService';
+import { WorkScheduleService } from './services/WorkScheduleService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,13 +33,24 @@ process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
   : process.env.DIST;
 
 const databaseService: DatabaseService = new DatabaseService();
+const dataStreamService: DataStreamService = new DataStreamService();
 const settingsService: SettingsService = new SettingsService();
 const workScheduleService: WorkScheduleService = new WorkScheduleService();
 const appUpdaterService: AppUpdaterService = new AppUpdaterService();
 const windowService: WindowService = new WindowService(appUpdaterService);
 const experienceSamplingService: ExperienceSamplingService = new ExperienceSamplingService();
-const trackers: TrackerService = new TrackerService(studyConfig.trackers, windowService, workScheduleService);
-const ipcHandler: IpcHandler = new IpcHandler(windowService, trackers, experienceSamplingService, workScheduleService);
+const trackers: TrackerService = new TrackerService(
+  studyConfig.trackers,
+  windowService,
+  workScheduleService,
+  dataStreamService
+);
+const ipcHandler: IpcHandler = new IpcHandler(
+  windowService,
+  trackers,
+  experienceSamplingService,
+  workScheduleService
+);
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) {
@@ -78,6 +90,7 @@ app.whenReady().then(async () => {
 
   try {
     await databaseService.init();
+    await dataStreamService.init();
     await workScheduleService.init();
     await settingsService.init();
     await windowService.init();
@@ -125,7 +138,8 @@ app.whenReady().then(async () => {
     }
 
     const settings: Settings = await Settings.findOneBy({ onlyOneEntityShouldExist: 1 });
-    const isAutoLaunch = app.getLoginItemSettings().wasOpenedAtLogin || process.argv.includes('--hidden');
+    const isAutoLaunch =
+      app.getLoginItemSettings().wasOpenedAtLogin || process.argv.includes('--hidden');
 
     // show onboarding window (if never shown or macOS permissions are missing)
     if (
@@ -138,13 +152,13 @@ app.whenReady().then(async () => {
       await windowService.createOnboardingWindow();
       settings.onboardingShown = true;
       await settings.save();
-    
-    // show PA running page when it was not shown before (on macOS) OR if it was manually started
+
+      // show PA running page when it was not shown before (on macOS) OR if it was manually started
     } else if (
       (is.macOS &&
-      settings.onboardingShown === true &&
-      settings.studyAndTrackersStartedShown === false) ||
-      (! isAutoLaunch)
+        settings.onboardingShown === true &&
+        settings.studyAndTrackersStartedShown === false) ||
+      !isAutoLaunch
     ) {
       await windowService.createOnboardingWindow('study-trackers-started');
       settings.studyAndTrackersStartedShown = true;
@@ -202,7 +216,6 @@ app.whenReady().then(async () => {
     );
     app.exit();
   }
-
 });
 
 let isAppQuitting = false;
