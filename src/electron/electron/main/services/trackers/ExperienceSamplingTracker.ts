@@ -6,6 +6,8 @@ import { Settings } from '../../entities/Settings';
 import { powerMonitor } from 'electron';
 import { WorkScheduleService } from '../WorkScheduleService'
 import studyConfig from '../../../../shared/study.config'
+import { DataStreamService } from '../DataStreamService';
+import { TrackerType } from 'electron/enums/TrackerType.enum';
 
 const LOG = getMainLogger('ExperienceSamplingTracker');
 
@@ -14,15 +16,23 @@ export class ExperienceSamplingTracker implements Tracker {
   private forcedExperienceSamplingJob: schedule.Job;
   private readonly windowService: WindowService;
   private readonly workScheduleService: WorkScheduleService;
+  private readonly dataStreamingService: DataStreamService;
   private readonly intervalInMs: number;
   private readonly samplingRandomization: number;
 
   public readonly name: string = 'ExperienceSamplingTracker';
   public isRunning: boolean = false;
 
-  constructor(windowService: WindowService, workScheduleService: WorkScheduleService, intervalInMs: number, samplingRandomization: number) {
+  constructor(
+    windowService: WindowService,
+    workScheduleService: WorkScheduleService,
+    dataStreamingService: DataStreamService,
+    intervalInMs: number,
+    samplingRandomization: number
+  ) {
     this.windowService = windowService;
     this.workScheduleService = workScheduleService;
+    this.dataStreamingService = dataStreamingService;
     this.intervalInMs = intervalInMs;
     this.samplingRandomization = samplingRandomization;
   }
@@ -81,6 +91,14 @@ export class ExperienceSamplingTracker implements Tracker {
     } else {
       // within work hours; start experience sampling
       await this.windowService.createExperienceSamplingWindow();
+      if(studyConfig.dataStreaming.enabled && studyConfig.dataStreaming.streamExperienceSampling){
+        this.dataStreamingService.broadcast({
+          type: TrackerType.ExperienceSamplingTracker,
+          content: {
+            notification: "An Experience Sampling Job was started"
+          }
+        })
+      }
     }
     // keep schedule for next experience sampling job no matter what..
     await this.scheduleNextJob();

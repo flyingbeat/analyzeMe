@@ -36,6 +36,7 @@ export interface TrackerConfiguration {
 export interface DataStreamingConfiguration {
   enabled: boolean;
   streamedWindowActivities: Activity[];
+  streamExperienceSampling: boolean;
   port: number;
   host: string;
 }

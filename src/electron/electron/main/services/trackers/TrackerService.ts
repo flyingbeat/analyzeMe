@@ -89,6 +89,7 @@ export class TrackerService {
       const experienceSamplingTracker: ExperienceSamplingTracker = new ExperienceSamplingTracker(
         this.windowService,
         this.workScheduleService,
+        this.dataStreamService,
         this.config.experienceSamplingTracker.intervalInMs,
         this.config.experienceSamplingTracker.samplingRandomization
       );
