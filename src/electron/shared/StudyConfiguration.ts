@@ -1,3 +1,5 @@
+import Activity from 'PA.WindowsActivityTracker/typescript/dist/types/Activity';
+
 export interface UserInputTrackerConfiguration {
   enabled: boolean;
   intervalInMs: number;
@@ -31,6 +33,13 @@ export interface TrackerConfiguration {
   experienceSamplingTracker: ExperienceSamplingTrackerConfiguration;
 }
 
+export interface DataStreamingConfiguration {
+  enabled: boolean;
+  streamedWindowActivities: Activity[];
+  port: number;
+  host: string;
+}
+
 export interface StudyConfiguration {
   name: string;
   shortDescription: string;
@@ -42,6 +51,7 @@ export interface StudyConfiguration {
   subjectIdLength: number;
   dataExportEnabled: boolean;
   dataExportEncrypted: boolean;
+  dataStreaming: DataStreamingConfiguration;
   trackers: TrackerConfiguration;
   displayDaysParticipated: boolean;
 }

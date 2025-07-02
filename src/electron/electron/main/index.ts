@@ -1,27 +1,27 @@
+import 'reflect-metadata';
 import { app, dialog, powerMonitor, systemPreferences } from 'electron';
-import log from 'electron-log/main';
 import { release } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import 'reflect-metadata';
-import studyConfig from '../../shared/study.config';
+import log from 'electron-log/main';
 import { getMainLogger } from '../config/Logger';
-import { TrackerType } from '../enums/TrackerType.enum';
-import { UsageDataEventType } from '../enums/UsageDataEventType.enum';
-import { IpcHandler } from '../ipc/IpcHandler';
-import { Settings } from './entities/Settings';
-import AppUpdaterService from './services/AppUpdaterService';
 import { DatabaseService } from './services/DatabaseService';
-import { DataStreamService } from './services/DataStreamService';
-import { ExperienceSamplingService } from './services/ExperienceSamplingService';
 import { SettingsService } from './services/SettingsService';
-import { TrackerService } from './services/trackers/TrackerService';
-import { UserInputTrackerService } from './services/trackers/UserInputTrackerService';
+import { TrackerType } from '../enums/TrackerType.enum';
 import { WindowActivityTrackerService } from './services/trackers/WindowActivityTrackerService';
-import { UsageDataService } from './services/UsageDataService';
-import { is } from './services/utils/helpers';
+import { UserInputTrackerService } from './services/trackers/UserInputTrackerService';
+import { TrackerService } from './services/trackers/TrackerService';
+import AppUpdaterService from './services/AppUpdaterService';
 import { WindowService } from './services/WindowService';
-import { WorkScheduleService } from './services/WorkScheduleService';
+import { IpcHandler } from '../ipc/IpcHandler';
+import { ExperienceSamplingService } from './services/ExperienceSamplingService';
+import studyConfig from '../../shared/study.config';
+import { is } from './services/utils/helpers';
+import { Settings } from './entities/Settings';
+import { UsageDataService } from './services/UsageDataService';
+import { UsageDataEventType } from '../enums/UsageDataEventType.enum';
+import { WorkScheduleService } from './services/WorkScheduleService'
+import { DataStreamService } from './services/DataStreamService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,7 +33,10 @@ process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
   : process.env.DIST;
 
 const databaseService: DatabaseService = new DatabaseService();
-const dataStreamService: DataStreamService = new DataStreamService();
+const dataStreamService: DataStreamService = new DataStreamService(
+  studyConfig.dataStreaming.port,
+  studyConfig.dataStreaming.host
+);
 const settingsService: SettingsService = new SettingsService();
 const workScheduleService: WorkScheduleService = new WorkScheduleService();
 const appUpdaterService: AppUpdaterService = new AppUpdaterService();
@@ -90,7 +93,6 @@ app.whenReady().then(async () => {
 
   try {
     await databaseService.init();
-    await dataStreamService.init();
     await workScheduleService.init();
     await settingsService.init();
     await windowService.init();
@@ -117,6 +119,10 @@ app.whenReady().then(async () => {
     await appUpdaterService.checkForUpdates({ silent: true });
     appUpdaterService.startCheckForUpdatesInterval();
 
+    if (studyConfig.dataStreaming.enabled) {
+      await dataStreamService.init();
+    }
+
     if (studyConfig.trackers.windowActivityTracker.enabled) {
       await trackers.registerTrackerCallback(
         TrackerType.WindowsActivityTracker,
@@ -138,8 +144,7 @@ app.whenReady().then(async () => {
     }
 
     const settings: Settings = await Settings.findOneBy({ onlyOneEntityShouldExist: 1 });
-    const isAutoLaunch =
-      app.getLoginItemSettings().wasOpenedAtLogin || process.argv.includes('--hidden');
+    const isAutoLaunch = app.getLoginItemSettings().wasOpenedAtLogin || process.argv.includes('--hidden');
 
     // show onboarding window (if never shown or macOS permissions are missing)
     if (
@@ -158,7 +163,7 @@ app.whenReady().then(async () => {
       (is.macOS &&
         settings.onboardingShown === true &&
         settings.studyAndTrackersStartedShown === false) ||
-      !isAutoLaunch
+      (! isAutoLaunch)
     ) {
       await windowService.createOnboardingWindow('study-trackers-started');
       settings.studyAndTrackersStartedShown = true;
@@ -215,6 +220,7 @@ app.whenReady().then(async () => {
       `PersonalAnalytics couldn't be started. Please try again or contact us at ${studyConfig.contactEmail} for help. ${error}`
     );
     app.exit();
+
   }
 });
 

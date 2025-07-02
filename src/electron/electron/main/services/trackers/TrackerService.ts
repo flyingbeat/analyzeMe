@@ -1,16 +1,16 @@
 import * as schedule from 'node-schedule';
-import { MoreThanOrEqual } from 'typeorm';
-import studyConfig from '../../../../shared/study.config';
-import getMainLogger from '../../../config/Logger';
-import { TrackerType } from '../../../enums/TrackerType.enum';
-import { TrackerConfig } from '../../../types/StudyConfig';
-import { UserInputEntity } from '../../entities/UserInputEntity';
-import { DataStreamService } from '../DataStreamService';
-import { WindowService } from '../WindowService';
-import { WorkScheduleService } from '../WorkScheduleService';
-import { DaysParticipatedTracker } from './DaysParticipatedTracker';
-import { ExperienceSamplingTracker } from './ExperienceSamplingTracker';
 import { Tracker } from './Tracker';
+import { TrackerConfig } from '../../../types/StudyConfig';
+import { TrackerType } from '../../../enums/TrackerType.enum';
+import getMainLogger from '../../../config/Logger';
+import { ExperienceSamplingTracker } from './ExperienceSamplingTracker';
+import { WindowService } from '../WindowService';
+import studyConfig from '../../../../shared/study.config';
+import { UserInputEntity } from '../../entities/UserInputEntity';
+import { MoreThanOrEqual } from 'typeorm';
+import { WorkScheduleService } from '../WorkScheduleService'
+import { DaysParticipatedTracker } from './DaysParticipatedTracker'
+import { DataStreamService } from '../DataStreamService';
 
 const LOG = getMainLogger('TrackerService');
 
@@ -56,11 +56,13 @@ export class TrackerService {
       const WAT = await import('windows-activity-tracker');
       const userInputTracker = new WAT.WindowsActivityTracker(
         (data) => {
-          if (data.activity === 'SocialMedia') {
+          if (
+            studyConfig.dataStreaming.enabled &&
+            data.activity in studyConfig.dataStreaming.streamedWindowActivities
+          ) {
             this.dataStreamService.broadcast({
-              type: 'user-input',
-              content: 'user is distracted',
-              timestamp: new Date().toISOString()
+              type: trackerType,
+              content: data
             });
           }
           callback(data);

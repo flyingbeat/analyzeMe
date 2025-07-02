@@ -8,7 +8,7 @@ const LOG = getMainLogger('DataStreamService');
 interface WebSocketMessage {
   type: string;
   content: any;
-  timestamp: string;
+  timestamp?: string;
   clientId?: string;
 }
 
