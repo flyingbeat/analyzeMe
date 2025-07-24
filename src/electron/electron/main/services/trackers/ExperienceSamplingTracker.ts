@@ -1,13 +1,13 @@
-import * as schedule from 'node-schedule';
-import { WindowService } from '../WindowService';
-import { Tracker } from './Tracker';
-import getMainLogger from '../../../config/Logger';
-import { Settings } from '../../entities/Settings';
 import { powerMonitor } from 'electron';
-import { WorkScheduleService } from '../WorkScheduleService'
-import studyConfig from '../../../../shared/study.config'
+import * as schedule from 'node-schedule';
+import studyConfig from '../../../../shared/study.config';
+import getMainLogger from '../../../config/Logger';
+import { TrackerType } from '../../../enums/TrackerType.enum';
+import { Settings } from '../../entities/Settings';
 import { DataStreamService } from '../DataStreamService';
-import { TrackerType } from 'electron/enums/TrackerType.enum';
+import { WindowService } from '../WindowService';
+import { WorkScheduleService } from '../WorkScheduleService';
+import { Tracker } from './Tracker';
 
 const LOG = getMainLogger('ExperienceSamplingTracker');
 
