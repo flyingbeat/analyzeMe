@@ -1,4 +1,3 @@
-import Activity from 'windows-activity-tracker/dist/types/Activity';
 import { StudyConfiguration } from './StudyConfiguration';
 
 const studyConfig: StudyConfiguration = {
@@ -17,7 +16,7 @@ const studyConfig: StudyConfiguration = {
   displayDaysParticipated: true,
   dataStreaming: {
     enabled: true,
-    streamedWindowActivities: [Activity.SocialMedia],
+    streamedWindowActivities: ['SocialMedia'],
     streamExperienceSampling: true,
     port: 3000,
     host: '0.0.0.0'

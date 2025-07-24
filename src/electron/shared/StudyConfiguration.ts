@@ -1,5 +1,3 @@
-import Activity from 'windows-activity-tracker/dist/types/Activity';
-
 export interface UserInputTrackerConfiguration {
   enabled: boolean;
   intervalInMs: number;
@@ -35,7 +33,7 @@ export interface TrackerConfiguration {
 
 export interface DataStreamingConfiguration {
   enabled: boolean;
-  streamedWindowActivities: Activity[];
+  streamedWindowActivities: string[];
   streamExperienceSampling: boolean;
   port: number;
   host: string;
