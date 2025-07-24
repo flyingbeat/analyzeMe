@@ -1,16 +1,16 @@
 import * as schedule from 'node-schedule';
-import { Tracker } from './Tracker';
-import { TrackerConfig } from '../../../types/StudyConfig';
-import { TrackerType } from '../../../enums/TrackerType.enum';
-import getMainLogger from '../../../config/Logger';
-import { ExperienceSamplingTracker } from './ExperienceSamplingTracker';
-import { WindowService } from '../WindowService';
-import studyConfig from '../../../../shared/study.config';
-import { UserInputEntity } from '../../entities/UserInputEntity';
 import { MoreThanOrEqual } from 'typeorm';
-import { WorkScheduleService } from '../WorkScheduleService'
-import { DaysParticipatedTracker } from './DaysParticipatedTracker'
+import studyConfig from '../../../../shared/study.config';
+import getMainLogger from '../../../config/Logger';
+import { TrackerType } from '../../../enums/TrackerType.enum';
+import { TrackerConfig } from '../../../types/StudyConfig';
+import { UserInputEntity } from '../../entities/UserInputEntity';
 import { DataStreamService } from '../DataStreamService';
+import { WindowService } from '../WindowService';
+import { WorkScheduleService } from '../WorkScheduleService';
+import { DaysParticipatedTracker } from './DaysParticipatedTracker';
+import { ExperienceSamplingTracker } from './ExperienceSamplingTracker';
+import { Tracker } from './Tracker';
 
 const LOG = getMainLogger('TrackerService');
 
@@ -58,7 +58,7 @@ export class TrackerService {
         (data) => {
           if (
             studyConfig.dataStreaming.enabled &&
-            data.activity in studyConfig.dataStreaming.streamedWindowActivities
+            studyConfig.dataStreaming.streamedWindowActivities.includes(data.activity)
           ) {
             this.dataStreamService.broadcast({
               type: trackerType,
