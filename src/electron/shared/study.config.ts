@@ -1,4 +1,4 @@
-import Activity from 'PA.WindowsActivityTracker/typescript/dist/types/Activity';
+import Activity from 'windows-activity-tracker/dist/types/Activity';
 import { StudyConfiguration } from './StudyConfiguration';
 
 const studyConfig: StudyConfiguration = {
