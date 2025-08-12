@@ -31,6 +31,14 @@ export interface TrackerConfiguration {
   experienceSamplingTracker: ExperienceSamplingTrackerConfiguration;
 }
 
+export interface DataStreamingConfiguration {
+  enabled: boolean;
+  streamedWindowActivities: string[];
+  streamExperienceSampling: boolean;
+  port: number;
+  host: string;
+}
+
 export interface StudyConfiguration {
   name: string;
   shortDescription: string;
@@ -42,6 +50,7 @@ export interface StudyConfiguration {
   subjectIdLength: number;
   dataExportEnabled: boolean;
   dataExportEncrypted: boolean;
+  dataStreaming: DataStreamingConfiguration;
   trackers: TrackerConfiguration;
   displayDaysParticipated: boolean;
 }

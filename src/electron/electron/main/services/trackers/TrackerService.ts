@@ -1,15 +1,16 @@
 import * as schedule from 'node-schedule';
-import { Tracker } from './Tracker';
-import { TrackerConfig } from '../../../types/StudyConfig';
-import { TrackerType } from '../../../enums/TrackerType.enum';
-import getMainLogger from '../../../config/Logger';
-import { ExperienceSamplingTracker } from './ExperienceSamplingTracker';
-import { WindowService } from '../WindowService';
-import studyConfig from '../../../../shared/study.config';
-import { UserInputEntity } from '../../entities/UserInputEntity';
 import { MoreThanOrEqual } from 'typeorm';
-import { WorkScheduleService } from '../WorkScheduleService'
-import { DaysParticipatedTracker } from './DaysParticipatedTracker'
+import studyConfig from '../../../../shared/study.config';
+import getMainLogger from '../../../config/Logger';
+import { TrackerType } from '../../../enums/TrackerType.enum';
+import { TrackerConfig } from '../../../types/StudyConfig';
+import { UserInputEntity } from '../../entities/UserInputEntity';
+import { DataStreamService } from '../DataStreamService';
+import { WindowService } from '../WindowService';
+import { WorkScheduleService } from '../WorkScheduleService';
+import { DaysParticipatedTracker } from './DaysParticipatedTracker';
+import { ExperienceSamplingTracker } from './ExperienceSamplingTracker';
+import { Tracker } from './Tracker';
 
 const LOG = getMainLogger('TrackerService');
 
@@ -18,12 +19,19 @@ export class TrackerService {
   private readonly config: TrackerConfig;
   private readonly windowService: WindowService;
   private readonly workScheduleService: WorkScheduleService;
+  private readonly dataStreamService: DataStreamService;
   private checkIfUITIsWorkingJob: schedule.Job;
 
-  constructor(trackerConfig: TrackerConfig, windowService: WindowService, workScheduleService: WorkScheduleService) {
+  constructor(
+    trackerConfig: TrackerConfig,
+    windowService: WindowService,
+    workScheduleService: WorkScheduleService,
+    dataStreamService: DataStreamService
+  ) {
     this.config = trackerConfig;
     this.windowService = windowService;
     this.workScheduleService = workScheduleService;
+    this.dataStreamService = dataStreamService;
     LOG.debug(`TrackerService.constructor: config=${JSON.stringify(this.config)}`);
   }
 
@@ -47,7 +55,18 @@ export class TrackerService {
         studyConfig.trackers.windowActivityTracker.trackWindowTitles;
       const WAT = await import('windows-activity-tracker');
       const userInputTracker = new WAT.WindowsActivityTracker(
-        callback,
+        (data) => {
+          if (
+            studyConfig.dataStreaming.enabled &&
+            studyConfig.dataStreaming.streamedWindowActivities.includes(data.activity)
+          ) {
+            this.dataStreamService.broadcast({
+              type: trackerType,
+              content: data
+            });
+          }
+          callback(data);
+        },
         this.config.windowActivityTracker.intervalInMs,
         accessibilityPermission,
         screenRecordingPermission
@@ -70,6 +89,7 @@ export class TrackerService {
       const experienceSamplingTracker: ExperienceSamplingTracker = new ExperienceSamplingTracker(
         this.windowService,
         this.workScheduleService,
+        this.dataStreamService,
         this.config.experienceSamplingTracker.intervalInMs,
         this.config.experienceSamplingTracker.samplingRandomization
       );

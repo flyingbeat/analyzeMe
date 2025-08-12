@@ -21,6 +21,7 @@ import { Settings } from './entities/Settings';
 import { UsageDataService } from './services/UsageDataService';
 import { UsageDataEventType } from '../enums/UsageDataEventType.enum';
 import { WorkScheduleService } from './services/WorkScheduleService'
+import { DataStreamService } from './services/DataStreamService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,13 +33,27 @@ process.env.VITE_PUBLIC = process.env.VITE_DEV_SERVER_URL
   : process.env.DIST;
 
 const databaseService: DatabaseService = new DatabaseService();
+const dataStreamService: DataStreamService = new DataStreamService(
+  studyConfig.dataStreaming.port,
+  studyConfig.dataStreaming.host
+);
 const settingsService: SettingsService = new SettingsService();
 const workScheduleService: WorkScheduleService = new WorkScheduleService();
 const appUpdaterService: AppUpdaterService = new AppUpdaterService();
 const windowService: WindowService = new WindowService(appUpdaterService);
 const experienceSamplingService: ExperienceSamplingService = new ExperienceSamplingService();
-const trackers: TrackerService = new TrackerService(studyConfig.trackers, windowService, workScheduleService);
-const ipcHandler: IpcHandler = new IpcHandler(windowService, trackers, experienceSamplingService, workScheduleService);
+const trackers: TrackerService = new TrackerService(
+  studyConfig.trackers,
+  windowService,
+  workScheduleService,
+  dataStreamService
+);
+const ipcHandler: IpcHandler = new IpcHandler(
+  windowService,
+  trackers,
+  experienceSamplingService,
+  workScheduleService
+);
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) {
@@ -104,6 +119,10 @@ app.whenReady().then(async () => {
     await appUpdaterService.checkForUpdates({ silent: true });
     appUpdaterService.startCheckForUpdatesInterval();
 
+    if (studyConfig.dataStreaming.enabled) {
+      await dataStreamService.init();
+    }
+
     if (studyConfig.trackers.windowActivityTracker.enabled) {
       await trackers.registerTrackerCallback(
         TrackerType.WindowsActivityTracker,
@@ -138,12 +157,12 @@ app.whenReady().then(async () => {
       await windowService.createOnboardingWindow();
       settings.onboardingShown = true;
       await settings.save();
-    
-    // show PA running page when it was not shown before (on macOS) OR if it was manually started
+
+      // show PA running page when it was not shown before (on macOS) OR if it was manually started
     } else if (
       (is.macOS &&
-      settings.onboardingShown === true &&
-      settings.studyAndTrackersStartedShown === false) ||
+        settings.onboardingShown === true &&
+        settings.studyAndTrackersStartedShown === false) ||
       (! isAutoLaunch)
     ) {
       await windowService.createOnboardingWindow('study-trackers-started');
@@ -201,8 +220,8 @@ app.whenReady().then(async () => {
       `PersonalAnalytics couldn't be started. Please try again or contact us at ${studyConfig.contactEmail} for help. ${error}`
     );
     app.exit();
-  }
 
+  }
 });
 
 let isAppQuitting = false;
